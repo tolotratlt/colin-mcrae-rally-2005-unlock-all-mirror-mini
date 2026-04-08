@@ -25,6 +25,8 @@ constexpr int kIdCheckboxMirror = 1003;
 constexpr int kIdCheckboxMini = 1004;
 constexpr int kIdCheckboxReset = 1005;
 constexpr int kIdButtonApply = 1006;
+constexpr int kIdMenuFileExit = 2001;
+constexpr int kIdMenuAboutVersion = 2002;
 
 constexpr DWORD kPatchAll = 1u << 0;
 constexpr DWORD kPatchMirror = 1u << 1;
@@ -33,6 +35,8 @@ constexpr DWORD kPatchReset = 1u << 3;
 
 struct AppState {
     wchar_t installPath[1024]{};
+    wchar_t installPathDisplay[1024]{};
+    bool installDetected = false;
     HWND editPath = nullptr;
     HWND cbAll = nullptr;
     HWND cbMirror = nullptr;
@@ -472,15 +476,132 @@ DWORD BuildPatchFlagsFromUI(const AppState* state) {
 bool ImpliesUnlockAll(DWORD flags) {
     return (flags & (kPatchAll | kPatchMini)) != 0u;
 }
+HMENU BuildAppMenu() {
+    HMENU mainMenu = CreateMenu();
+    HMENU fileMenu = CreatePopupMenu();
+    HMENU aboutMenu = CreatePopupMenu();
+
+    if (!mainMenu || !fileMenu || !aboutMenu) {
+        if (aboutMenu) {
+            DestroyMenu(aboutMenu);
+        }
+        if (fileMenu) {
+            DestroyMenu(fileMenu);
+        }
+        if (mainMenu) {
+            DestroyMenu(mainMenu);
+        }
+        return nullptr;
+    }
+
+    AppendMenuW(fileMenu, MF_STRING, static_cast<UINT_PTR>(kIdMenuFileExit), L"Exit");
+    AppendMenuW(mainMenu, MF_POPUP, reinterpret_cast<UINT_PTR>(fileMenu), L"File");
+
+    AppendMenuW(aboutMenu, MF_STRING, static_cast<UINT_PTR>(kIdMenuAboutVersion), L"Version");
+    AppendMenuW(mainMenu, MF_POPUP, reinterpret_cast<UINT_PTR>(aboutMenu), L"About");
+
+    return mainMenu;
+}
+
+bool CheckWriteAccessForPatch(const wchar_t* installPath, DWORD* outError) {
+    if (outError) {
+        *outError = ERROR_SUCCESS;
+    }
+
+    if (!installPath || installPath[0] == L'\0') {
+        if (outError) {
+            *outError = ERROR_INVALID_PARAMETER;
+        }
+        return false;
+    }
+
+    wchar_t optionsPath[1200]{};
+    if (!BuildPath(installPath, L"\\SG\\OPTIONS", optionsPath, _countof(optionsPath))) {
+        if (outError) {
+            *outError = ERROR_BUFFER_OVERFLOW;
+        }
+        return false;
+    }
+
+    if (!FileExists(optionsPath)) {
+        return true;
+    }
+
+    HANDLE optionsHandle = CreateFileW(
+        optionsPath,
+        GENERIC_WRITE,
+        FILE_SHARE_READ,
+        nullptr,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        nullptr);
+
+    if (optionsHandle == INVALID_HANDLE_VALUE) {
+        if (outError) {
+            *outError = GetLastError();
+        }
+        return false;
+    }
+    CloseHandle(optionsHandle);
+
+    wchar_t testPath[1220]{};
+    if (!BuildPath(installPath, L"\\SG\\.__cmr5_write_test.tmp", testPath, _countof(testPath))) {
+        if (outError) {
+            *outError = ERROR_BUFFER_OVERFLOW;
+        }
+        return false;
+    }
+
+    if (FileExists(testPath)) {
+        DeleteFileW(testPath);
+    }
+
+    HANDLE testHandle = CreateFileW(
+        testPath,
+        GENERIC_WRITE,
+        0,
+        nullptr,
+        CREATE_NEW,
+        FILE_ATTRIBUTE_NORMAL,
+        nullptr);
+
+    if (testHandle == INVALID_HANDLE_VALUE) {
+        if (outError) {
+            *outError = GetLastError();
+        }
+        return false;
+    }
+
+    CloseHandle(testHandle);
+    DeleteFileW(testPath);
+    return true;
+}
 
 void RunPatch(HWND hwnd, AppState* state) {
     if (!state) {
         return;
     }
 
+    if (!state->installDetected) {
+        MessageBoxW(hwnd, L"Game is not installed or not detected.", L"CMR5 Patcher", MB_ICONWARNING | MB_OK);
+        return;
+    }
+
     DWORD flags = BuildPatchFlagsFromUI(state);
     if (flags == 0u) {
         MessageBoxW(hwnd, L"Select at least one option.", L"CMR5 Patcher", MB_ICONINFORMATION | MB_OK);
+        return;
+    }
+
+    DWORD writeAccessError = ERROR_SUCCESS;
+    if (!CheckWriteAccessForPatch(state->installPath, &writeAccessError)) {
+        wchar_t accessText[320]{};
+        StringCchPrintfW(
+            accessText,
+            _countof(accessText),
+            L"Backup/output files are not writable (Win32 error: %lu).\nPlease rerun this application as Administrator.",
+            writeAccessError);
+        MessageBoxW(hwnd, accessText, L"CMR5 Patcher", MB_ICONWARNING | MB_OK);
         return;
     }
 
@@ -587,13 +708,18 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(app));
             state = app;
 
+            HMENU appMenu = BuildAppMenu();
+            if (appMenu) {
+                SetMenu(hwnd, appMenu);
+            }
+
             CreateWindowExW(0, L"STATIC", L"Game path:", WS_VISIBLE | WS_CHILD,
                             16, 16, 140, 20, hwnd, nullptr, nullptr, nullptr);
 
             state->editPath = CreateWindowExW(
                 WS_EX_CLIENTEDGE,
                 L"EDIT",
-                state->installPath,
+                state->installPathDisplay,
                 WS_VISIBLE | WS_CHILD | ES_AUTOHSCROLL | ES_READONLY,
                 16,
                 38,
@@ -634,6 +760,16 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_COMMAND: {
             const int controlId = LOWORD(wParam);
             const int notifyCode = HIWORD(wParam);
+
+            if (controlId == kIdMenuFileExit) {
+                DestroyWindow(hwnd);
+                return 0;
+            }
+
+            if (controlId == kIdMenuAboutVersion) {
+                MessageBoxW(hwnd, L"By tlt\nversion 1.0.0\ntolotra.alwaysdata.net", L"Version", MB_ICONINFORMATION | MB_OK);
+                return 0;
+            }
 
             if (controlId == kIdCheckboxReset && notifyCode == BN_CLICKED) {
                 const bool resetChecked = state && IsChecked(state->cbReset);
@@ -717,18 +853,14 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow) {
 
     AppState state{};
 
-    if (!ReadInstallPathFromRegistry(state.installPath, static_cast<DWORD>(_countof(state.installPath)))) {
-        MessageBoxW(
-            nullptr,
-            L"Cannot read INSTALL_PATH from registry. Verify game installation.",
-            L"CMR5 Patcher",
-            MB_ICONERROR | MB_OK);
-        return 1;
-    }
-
-    if (!DirectoryExists(state.installPath)) {
-        MessageBoxW(nullptr, L"Detected install directory does not exist.", L"CMR5 Patcher", MB_ICONERROR | MB_OK);
-        return 1;
+    if (ReadInstallPathFromRegistry(state.installPath, static_cast<DWORD>(_countof(state.installPath))) &&
+        DirectoryExists(state.installPath)) {
+        state.installDetected = true;
+        lstrcpynW(state.installPathDisplay, state.installPath, static_cast<int>(_countof(state.installPathDisplay)));
+    } else {
+        state.installDetected = false;
+        state.installPath[0] = L'\0';
+        lstrcpynW(state.installPathDisplay, L"Game is not installed or not detected.", static_cast<int>(_countof(state.installPathDisplay)));
     }
 
     const wchar_t kClassName[] = L"CMR5PatcherWin32Class";
