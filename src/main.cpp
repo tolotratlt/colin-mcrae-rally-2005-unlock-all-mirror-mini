@@ -11,6 +11,12 @@
 
 namespace {
 constexpr DWORD kExpectedOptionsSize = 931048;
+constexpr size_t kOffsetUnlockA = 0x0C;
+constexpr size_t kOffsetMirrorA = 0x0D;
+constexpr size_t kOffsetMiniA = 0x0E;
+constexpr size_t kOffsetUnlockB = 0x10;
+constexpr size_t kOffsetMirrorB = 0x11;
+constexpr size_t kOffsetMiniB = 0x12;
 
 constexpr int kIdEditPath = 1001;
 constexpr int kIdCheckboxAll = 1002;
@@ -214,25 +220,38 @@ bool WriteFileBytes(const wchar_t* path, const BYTE* buffer, DWORD size, DWORD* 
 }
 
 void ApplyPatch(BYTE* data, DWORD flags) {
+    if ((flags & kPatchReset) != 0u) {
+        data[kOffsetUnlockA] = 0x00;
+        data[kOffsetMirrorA] = 0x00;
+        data[kOffsetMiniA] = 0x00;
+        data[kOffsetUnlockB] = 0x00;
+        data[kOffsetMirrorB] = 0x00;
+        data[kOffsetMiniB] = 0x00;
+        return;
+    }
+
     if ((flags & kPatchAll) != 0u) {
-        data[0x0C] = 0xFF;
-        data[0x0D] = 0x01;
-        data[0x10] = 0xFF;
+        // Community guides point to the two base cheat bytes at 0x0C and 0x10.
+        data[kOffsetUnlockA] = 0xFF;
+        data[kOffsetUnlockB] = 0xFF;
     }
 
     if ((flags & kPatchMirror) != 0u) {
-        data[0x0F] = 0xFF;
+        // Mirror mode extends the same blocks to two bytes each.
+        data[kOffsetUnlockA] = 0xFF;
+        data[kOffsetMirrorA] = 0xFF;
+        data[kOffsetUnlockB] = 0xFF;
+        data[kOffsetMirrorB] = 0xFF;
     }
 
     if ((flags & kPatchMini) != 0u) {
-        data[0x0D] = 0xFF;
-    }
-
-    if ((flags & kPatchReset) != 0u) {
-        data[0x0C] = 0x00;
-        data[0x0D] = 0x00;
-        data[0x0F] = 0x00;
-        data[0x10] = 0x00;
+        // Mini cars extends the blocks to three bytes each.
+        data[kOffsetUnlockA] = 0xFF;
+        data[kOffsetMirrorA] = 0xFF;
+        data[kOffsetMiniA] = 0xFF;
+        data[kOffsetUnlockB] = 0xFF;
+        data[kOffsetMirrorB] = 0xFF;
+        data[kOffsetMiniB] = 0xFF;
     }
 }
 
@@ -736,5 +755,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow) {
 
     return static_cast<int>(msg.wParam);
 }
+
 
 
