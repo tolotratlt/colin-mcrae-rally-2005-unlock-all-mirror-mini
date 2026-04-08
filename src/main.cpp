@@ -1,4 +1,4 @@
-#include <windows.h>
+﻿#include <windows.h>
 #include <shellapi.h>
 #include <strsafe.h>
 
@@ -27,22 +27,212 @@ constexpr int kIdCheckboxReset = 1005;
 constexpr int kIdButtonApply = 1006;
 constexpr int kIdMenuFileExit = 2001;
 constexpr int kIdMenuAboutVersion = 2002;
+constexpr int kIdMenuLanguageEnglish = 2003;
+constexpr int kIdMenuLanguageFrench = 2004;
+constexpr int kIdMenuLanguageMalagasy = 2005;
 
 constexpr DWORD kPatchAll = 1u << 0;
 constexpr DWORD kPatchMirror = 1u << 1;
 constexpr DWORD kPatchMini = 1u << 2;
 constexpr DWORD kPatchReset = 1u << 3;
 
+enum class Language {
+    English = 0,
+    French,
+    Malagasy,
+};
+
 struct AppState {
     wchar_t installPath[1024]{};
     wchar_t installPathDisplay[1024]{};
     bool installDetected = false;
+    Language language = Language::English;
+    HMENU menuMain = nullptr;
+    HMENU menuFile = nullptr;
+    HMENU menuAbout = nullptr;
+    HMENU menuLanguage = nullptr;
+    HWND lblGamePath = nullptr;
     HWND editPath = nullptr;
     HWND cbAll = nullptr;
     HWND cbMirror = nullptr;
     HWND cbMini = nullptr;
     HWND cbReset = nullptr;
+    HWND btnApply = nullptr;
+    HWND lblBackup = nullptr;
 };
+enum class TextId {
+    WindowTitle,
+    MenuFile,
+    MenuExit,
+    MenuAbout,
+    MenuVersion,
+    MenuLanguage,
+    MenuLanguageEnglish,
+    MenuLanguageFrench,
+    MenuLanguageMalagasy,
+    LabelGamePath,
+    LabelBackup,
+    LabelInstallMissing,
+    CheckboxAll,
+    CheckboxMirror,
+    CheckboxMini,
+    CheckboxReset,
+    ButtonApply,
+    MsgSelectOption,
+    MsgGameNotDetected,
+    MsgWriteAccessFmt,
+    MsgUnexpectedSize,
+    MsgPatchSuccess,
+    MsgPatchSuccessUnlock,
+    MsgPatchSuccessElevated,
+    MsgPatchSuccessElevatedUnlock,
+    MsgOptionsMissing,
+    MsgNeedAdmin,
+    MsgElevationCancelled,
+    MsgElevatedFailedFmt,
+    MsgOptionsTooSmall,
+    MsgPatchFailedFmt,
+    MsgVersionTitle,
+    MsgVersionBody,
+};
+
+const wchar_t* T(Language language, TextId id) {
+    if (language == Language::French) {
+        switch (id) {
+            case TextId::WindowTitle: return L"CMR5 Patcher";
+            case TextId::MenuFile: return L"Fichier";
+            case TextId::MenuExit: return L"Quitter";
+            case TextId::MenuAbout: return L"A propos";
+            case TextId::MenuVersion: return L"Version";
+            case TextId::MenuLanguage: return L"Langue";
+            case TextId::MenuLanguageEnglish: return L"English";
+            case TextId::MenuLanguageFrench: return L"Francais";
+            case TextId::MenuLanguageMalagasy: return L"Malagasy";
+            case TextId::LabelGamePath: return L"Chemin du jeu:";
+            case TextId::LabelBackup: return L"Fichier de sauvegarde: OPTIONS.bak";
+            case TextId::LabelInstallMissing: return L"Jeu non installe ou non detecte.";
+            case TextId::CheckboxAll: return L"Debloquer toutes les voitures et circuits";
+            case TextId::CheckboxMirror: return L"Activer le mode miroir";
+            case TextId::CheckboxMini: return L"Activer le mode miniature";
+            case TextId::CheckboxReset: return L"Reinitialiser par defaut";
+            case TextId::ButtonApply: return L"Appliquer le patch";
+            case TextId::MsgSelectOption: return L"Selectionnez au moins une option.";
+            case TextId::MsgGameNotDetected: return L"Le jeu n'est pas installe ou n'est pas detecte.";
+            case TextId::MsgWriteAccessFmt: return L"Le fichier backup n'est pas inscriptible (erreur Win32: %lu).\nVeuillez reexecuter le logiciel en mode administrateur.";
+            case TextId::MsgUnexpectedSize: return L"Taille inattendue du fichier OPTIONS. Continuer quand meme ?";
+            case TextId::MsgPatchSuccess: return L"Patch applique avec succes.";
+            case TextId::MsgPatchSuccessUnlock: return L"Patch applique avec succes.\nUnlock-all applique (ou implique par le mode miniature).";
+            case TextId::MsgPatchSuccessElevated: return L"Patch applique avec succes (elevation).";
+            case TextId::MsgPatchSuccessElevatedUnlock: return L"Patch applique avec succes (elevation).\nUnlock-all applique (ou implique par le mode miniature).";
+            case TextId::MsgOptionsMissing: return L"Fichier SG\\OPTIONS introuvable. Lancez le jeu une fois avant de patcher.";
+            case TextId::MsgNeedAdmin: return L"L'ecriture requiert les privileges administrateur.\nVoulez-vous reessayer avec elevation ?";
+            case TextId::MsgElevationCancelled: return L"Elevation annulee.";
+            case TextId::MsgElevatedFailedFmt: return L"Echec du patch eleve (code: %lu).";
+            case TextId::MsgOptionsTooSmall: return L"Le fichier OPTIONS est trop petit.";
+            case TextId::MsgPatchFailedFmt: return L"Echec du patch (erreur Win32: %lu).";
+            case TextId::MsgVersionTitle: return L"Version";
+            case TextId::MsgVersionBody: return L"By tlt\nversion 1.0.0\ntolotra.alwaysdata.net";
+        }
+    }
+
+    if (language == Language::Malagasy) {
+        switch (id) {
+            case TextId::WindowTitle: return L"CMR5 Patcher";
+            case TextId::MenuFile: return L"Rakitra";
+            case TextId::MenuExit: return L"Hivoaka";
+            case TextId::MenuAbout: return L"Momba";
+            case TextId::MenuVersion: return L"Kinova";
+            case TextId::MenuLanguage: return L"Fiteny";
+            case TextId::MenuLanguageEnglish: return L"English";
+            case TextId::MenuLanguageFrench: return L"Francais";
+            case TextId::MenuLanguageMalagasy: return L"Malagasy";
+            case TextId::LabelGamePath: return L"Lalan'ny lalao:";
+            case TextId::LabelBackup: return L"Rakitra backup: OPTIONS.bak";
+            case TextId::LabelInstallMissing: return L"Tsy hita na tsy voapetraka ny lalao.";
+            case TextId::CheckboxAll: return L"Vohay daholo ny fiara sy circuit";
+            case TextId::CheckboxMirror: return L"Alefaso ny mode miroir";
+            case TextId::CheckboxMini: return L"Alefaso ny mode miniature";
+            case TextId::CheckboxReset: return L"Avereno ho default";
+            case TextId::ButtonApply: return L"Ampiharo ny patch";
+            case TextId::MsgSelectOption: return L"Misafidiana safidy iray farafahakeliny.";
+            case TextId::MsgGameNotDetected: return L"Tsy hita na tsy voapetraka ny lalao.";
+            case TextId::MsgWriteAccessFmt: return L"Tsy azo soratana ny rakitra backup (Win32 error: %lu).\nAleo averina alefa amin'ny mode administrateur ny logiciel.";
+            case TextId::MsgUnexpectedSize: return L"Haben'ny OPTIONS tsy nampoizina. Hanohy ve?";
+            case TextId::MsgPatchSuccess: return L"Tafapetraka ny patch.";
+            case TextId::MsgPatchSuccessUnlock: return L"Tafapetraka ny patch.\nUnlock-all napetraka (na avy amin'ny mode miniature).";
+            case TextId::MsgPatchSuccessElevated: return L"Tafapetraka ny patch (elevation).";
+            case TextId::MsgPatchSuccessElevatedUnlock: return L"Tafapetraka ny patch (elevation).\nUnlock-all napetraka (na avy amin'ny mode miniature).";
+            case TextId::MsgOptionsMissing: return L"Tsy hita ny SG\\OPTIONS. Alefaso indray mandeha ny lalao aloha.";
+            case TextId::MsgNeedAdmin: return L"Mila zo administrateur ny fanoratana.\nHanandrana elevation ve?";
+            case TextId::MsgElevationCancelled: return L"Nofoanana ny elevation.";
+            case TextId::MsgElevatedFailedFmt: return L"Tsy nahomby ny patch elevated (code: %lu).";
+            case TextId::MsgOptionsTooSmall: return L"Kely loatra ny rakitra OPTIONS.";
+            case TextId::MsgPatchFailedFmt: return L"Tsy nahomby ny patch (Win32 error: %lu).";
+            case TextId::MsgVersionTitle: return L"Kinova";
+            case TextId::MsgVersionBody: return L"By tlt\nversion 1.0.0\ntolotra.alwaysdata.net";
+        }
+    }
+
+    switch (id) {
+        case TextId::WindowTitle: return L"CMR5 Patcher";
+        case TextId::MenuFile: return L"File";
+        case TextId::MenuExit: return L"Exit";
+        case TextId::MenuAbout: return L"About";
+        case TextId::MenuVersion: return L"Version";
+        case TextId::MenuLanguage: return L"Language";
+        case TextId::MenuLanguageEnglish: return L"English";
+        case TextId::MenuLanguageFrench: return L"Francais";
+        case TextId::MenuLanguageMalagasy: return L"Malagasy";
+        case TextId::LabelGamePath: return L"Game path:";
+        case TextId::LabelBackup: return L"Backup file: OPTIONS.bak";
+        case TextId::LabelInstallMissing: return L"Game is not installed or not detected.";
+        case TextId::CheckboxAll: return L"Unlock all cars and circuits";
+        case TextId::CheckboxMirror: return L"Enable mirror mode";
+        case TextId::CheckboxMini: return L"Enable mini cars";
+        case TextId::CheckboxReset: return L"Reset to default";
+        case TextId::ButtonApply: return L"Apply patch";
+        case TextId::MsgSelectOption: return L"Select at least one option.";
+        case TextId::MsgGameNotDetected: return L"Game is not installed or not detected.";
+        case TextId::MsgWriteAccessFmt: return L"Backup file is not writable (Win32 error: %lu).\nPlease rerun this software as Administrator.";
+        case TextId::MsgUnexpectedSize: return L"Unexpected OPTIONS file size. Continue anyway?";
+        case TextId::MsgPatchSuccess: return L"Patch applied successfully.";
+        case TextId::MsgPatchSuccessUnlock: return L"Patch applied successfully.\nUnlock-all option applied (or implied by mini compatibility pattern).";
+        case TextId::MsgPatchSuccessElevated: return L"Patch applied successfully (elevated).";
+        case TextId::MsgPatchSuccessElevatedUnlock: return L"Patch applied successfully (elevated).\nUnlock-all option applied (or implied by mini compatibility pattern).";
+        case TextId::MsgOptionsMissing: return L"File SG\\OPTIONS not found. Launch the game once before patching.";
+        case TextId::MsgNeedAdmin: return L"Writing requires administrator privileges.\nDo you want to retry with elevated rights?";
+        case TextId::MsgElevationCancelled: return L"Elevation was cancelled.";
+        case TextId::MsgElevatedFailedFmt: return L"Elevated patch failed (code: %lu).";
+        case TextId::MsgOptionsTooSmall: return L"OPTIONS file is too small.";
+        case TextId::MsgPatchFailedFmt: return L"Patch failed (Win32 error: %lu).";
+        case TextId::MsgVersionTitle: return L"Version";
+        case TextId::MsgVersionBody: return L"By tlt\nversion 1.0.0\ntolotra.alwaysdata.net";
+    }
+
+    return L"";
+}
+
+int LanguageMenuId(Language language) {
+    switch (language) {
+        case Language::French: return kIdMenuLanguageFrench;
+        case Language::Malagasy: return kIdMenuLanguageMalagasy;
+        case Language::English:
+        default:
+            return kIdMenuLanguageEnglish;
+    }
+}
+
+void RefreshInstallPathDisplay(AppState* state) {
+    if (!state) {
+        return;
+    }
+
+    if (state->installDetected) {
+        lstrcpynW(state->installPathDisplay, state->installPath, static_cast<int>(_countof(state->installPathDisplay)));
+    } else {
+        lstrcpynW(state->installPathDisplay, T(state->language, TextId::LabelInstallMissing), static_cast<int>(_countof(state->installPathDisplay)));
+    }
+}
 
 bool IsChecked(HWND checkbox) {
     return SendMessageW(checkbox, BM_GETCHECK, 0, 0) == BST_CHECKED;
@@ -476,31 +666,94 @@ DWORD BuildPatchFlagsFromUI(const AppState* state) {
 bool ImpliesUnlockAll(DWORD flags) {
     return (flags & (kPatchAll | kPatchMini)) != 0u;
 }
-HMENU BuildAppMenu() {
-    HMENU mainMenu = CreateMenu();
-    HMENU fileMenu = CreatePopupMenu();
-    HMENU aboutMenu = CreatePopupMenu();
-
-    if (!mainMenu || !fileMenu || !aboutMenu) {
-        if (aboutMenu) {
-            DestroyMenu(aboutMenu);
-        }
-        if (fileMenu) {
-            DestroyMenu(fileMenu);
-        }
-        if (mainMenu) {
-            DestroyMenu(mainMenu);
-        }
+HMENU BuildAppMenu(AppState* state) {
+    if (!state) {
         return nullptr;
     }
 
-    AppendMenuW(fileMenu, MF_STRING, static_cast<UINT_PTR>(kIdMenuFileExit), L"Exit");
-    AppendMenuW(mainMenu, MF_POPUP, reinterpret_cast<UINT_PTR>(fileMenu), L"File");
+    state->menuMain = CreateMenu();
+    state->menuFile = CreatePopupMenu();
+    state->menuAbout = CreatePopupMenu();
+    state->menuLanguage = CreatePopupMenu();
 
-    AppendMenuW(aboutMenu, MF_STRING, static_cast<UINT_PTR>(kIdMenuAboutVersion), L"Version");
-    AppendMenuW(mainMenu, MF_POPUP, reinterpret_cast<UINT_PTR>(aboutMenu), L"About");
+    if (!state->menuMain || !state->menuFile || !state->menuAbout || !state->menuLanguage) {
+        return nullptr;
+    }
 
-    return mainMenu;
+    AppendMenuW(state->menuFile, MF_STRING, static_cast<UINT_PTR>(kIdMenuFileExit), T(state->language, TextId::MenuExit));
+    AppendMenuW(state->menuAbout, MF_STRING, static_cast<UINT_PTR>(kIdMenuAboutVersion), T(state->language, TextId::MenuVersion));
+
+    AppendMenuW(state->menuLanguage, MF_STRING, static_cast<UINT_PTR>(kIdMenuLanguageEnglish), T(state->language, TextId::MenuLanguageEnglish));
+    AppendMenuW(state->menuLanguage, MF_STRING, static_cast<UINT_PTR>(kIdMenuLanguageFrench), T(state->language, TextId::MenuLanguageFrench));
+    AppendMenuW(state->menuLanguage, MF_STRING, static_cast<UINT_PTR>(kIdMenuLanguageMalagasy), T(state->language, TextId::MenuLanguageMalagasy));
+
+    AppendMenuW(state->menuMain, MF_POPUP, reinterpret_cast<UINT_PTR>(state->menuFile), T(state->language, TextId::MenuFile));
+    AppendMenuW(state->menuMain, MF_POPUP, reinterpret_cast<UINT_PTR>(state->menuLanguage), T(state->language, TextId::MenuLanguage));
+    AppendMenuW(state->menuMain, MF_POPUP, reinterpret_cast<UINT_PTR>(state->menuAbout), T(state->language, TextId::MenuAbout));
+
+    CheckMenuRadioItem(
+        state->menuLanguage,
+        kIdMenuLanguageEnglish,
+        kIdMenuLanguageMalagasy,
+        LanguageMenuId(state->language),
+        MF_BYCOMMAND);
+
+    return state->menuMain;
+}
+
+void ApplyLanguageToUI(HWND hwnd, AppState* state) {
+    if (!state) {
+        return;
+    }
+
+    RefreshInstallPathDisplay(state);
+
+    SetWindowTextW(hwnd, T(state->language, TextId::WindowTitle));
+    if (state->lblGamePath) {
+        SetWindowTextW(state->lblGamePath, T(state->language, TextId::LabelGamePath));
+    }
+    if (state->editPath) {
+        SetWindowTextW(state->editPath, state->installPathDisplay);
+    }
+    if (state->cbAll) {
+        SetWindowTextW(state->cbAll, T(state->language, TextId::CheckboxAll));
+    }
+    if (state->cbMirror) {
+        SetWindowTextW(state->cbMirror, T(state->language, TextId::CheckboxMirror));
+    }
+    if (state->cbMini) {
+        SetWindowTextW(state->cbMini, T(state->language, TextId::CheckboxMini));
+    }
+    if (state->cbReset) {
+        SetWindowTextW(state->cbReset, T(state->language, TextId::CheckboxReset));
+    }
+    if (state->btnApply) {
+        SetWindowTextW(state->btnApply, T(state->language, TextId::ButtonApply));
+    }
+    if (state->lblBackup) {
+        SetWindowTextW(state->lblBackup, T(state->language, TextId::LabelBackup));
+    }
+
+    if (state->menuMain && state->menuFile && state->menuAbout && state->menuLanguage) {
+        ModifyMenuW(state->menuMain, 0, MF_BYPOSITION | MF_POPUP, reinterpret_cast<UINT_PTR>(state->menuFile), T(state->language, TextId::MenuFile));
+        ModifyMenuW(state->menuMain, 1, MF_BYPOSITION | MF_POPUP, reinterpret_cast<UINT_PTR>(state->menuLanguage), T(state->language, TextId::MenuLanguage));
+        ModifyMenuW(state->menuMain, 2, MF_BYPOSITION | MF_POPUP, reinterpret_cast<UINT_PTR>(state->menuAbout), T(state->language, TextId::MenuAbout));
+
+        ModifyMenuW(state->menuFile, kIdMenuFileExit, MF_BYCOMMAND | MF_STRING, static_cast<UINT_PTR>(kIdMenuFileExit), T(state->language, TextId::MenuExit));
+        ModifyMenuW(state->menuAbout, kIdMenuAboutVersion, MF_BYCOMMAND | MF_STRING, static_cast<UINT_PTR>(kIdMenuAboutVersion), T(state->language, TextId::MenuVersion));
+
+        ModifyMenuW(state->menuLanguage, kIdMenuLanguageEnglish, MF_BYCOMMAND | MF_STRING, static_cast<UINT_PTR>(kIdMenuLanguageEnglish), T(state->language, TextId::MenuLanguageEnglish));
+        ModifyMenuW(state->menuLanguage, kIdMenuLanguageFrench, MF_BYCOMMAND | MF_STRING, static_cast<UINT_PTR>(kIdMenuLanguageFrench), T(state->language, TextId::MenuLanguageFrench));
+        ModifyMenuW(state->menuLanguage, kIdMenuLanguageMalagasy, MF_BYCOMMAND | MF_STRING, static_cast<UINT_PTR>(kIdMenuLanguageMalagasy), T(state->language, TextId::MenuLanguageMalagasy));
+
+        CheckMenuRadioItem(
+            state->menuLanguage,
+            kIdMenuLanguageEnglish,
+            kIdMenuLanguageMalagasy,
+            LanguageMenuId(state->language),
+            MF_BYCOMMAND);
+        DrawMenuBar(hwnd);
+    }
 }
 
 bool CheckWriteAccessForPatch(const wchar_t* installPath, DWORD* outError) {
@@ -582,14 +835,16 @@ void RunPatch(HWND hwnd, AppState* state) {
         return;
     }
 
+    const wchar_t* caption = T(state->language, TextId::WindowTitle);
+
     if (!state->installDetected) {
-        MessageBoxW(hwnd, L"Game is not installed or not detected.", L"CMR5 Patcher", MB_ICONWARNING | MB_OK);
+        MessageBoxW(hwnd, T(state->language, TextId::MsgGameNotDetected), caption, MB_ICONWARNING | MB_OK);
         return;
     }
 
     DWORD flags = BuildPatchFlagsFromUI(state);
     if (flags == 0u) {
-        MessageBoxW(hwnd, L"Select at least one option.", L"CMR5 Patcher", MB_ICONINFORMATION | MB_OK);
+        MessageBoxW(hwnd, T(state->language, TextId::MsgSelectOption), caption, MB_ICONINFORMATION | MB_OK);
         return;
     }
 
@@ -599,9 +854,9 @@ void RunPatch(HWND hwnd, AppState* state) {
         StringCchPrintfW(
             accessText,
             _countof(accessText),
-            L"Backup/output files are not writable (Win32 error: %lu).\nPlease rerun this application as Administrator.",
+            T(state->language, TextId::MsgWriteAccessFmt),
             writeAccessError);
-        MessageBoxW(hwnd, accessText, L"CMR5 Patcher", MB_ICONWARNING | MB_OK);
+        MessageBoxW(hwnd, accessText, caption, MB_ICONWARNING | MB_OK);
         return;
     }
 
@@ -620,8 +875,8 @@ void RunPatch(HWND hwnd, AppState* state) {
     if (unexpectedSize) {
         int answer = MessageBoxW(
             hwnd,
-            L"Unexpected OPTIONS file size. Continue anyway?",
-            L"CMR5 Patcher",
+            T(state->language, TextId::MsgUnexpectedSize),
+            caption,
             MB_ICONQUESTION | MB_YESNO);
 
         if (answer != IDYES) {
@@ -639,9 +894,9 @@ void RunPatch(HWND hwnd, AppState* state) {
 
     if (status == PatchStatus::Ok) {
         if (ImpliesUnlockAll(flags)) {
-            MessageBoxW(hwnd, L"Patch applied successfully.\nUnlock-all option applied (or implied by mini compatibility pattern).", L"CMR5 Patcher", MB_ICONINFORMATION | MB_OK);
+            MessageBoxW(hwnd, T(state->language, TextId::MsgPatchSuccessUnlock), caption, MB_ICONINFORMATION | MB_OK);
         } else {
-            MessageBoxW(hwnd, L"Patch applied successfully.", L"CMR5 Patcher", MB_ICONINFORMATION | MB_OK);
+            MessageBoxW(hwnd, T(state->language, TextId::MsgPatchSuccess), caption, MB_ICONINFORMATION | MB_OK);
         }
         return;
     }
@@ -649,8 +904,8 @@ void RunPatch(HWND hwnd, AppState* state) {
     if (status == PatchStatus::OptionsMissing) {
         MessageBoxW(
             hwnd,
-            L"File SG\\OPTIONS not found. Launch the game once before patching.",
-            L"CMR5 Patcher",
+            T(state->language, TextId::MsgOptionsMissing),
+            caption,
             MB_ICONWARNING | MB_OK);
         return;
     }
@@ -658,8 +913,8 @@ void RunPatch(HWND hwnd, AppState* state) {
     if (needsElevation) {
         int answer = MessageBoxW(
             hwnd,
-            L"Writing requires administrator privileges.\nDo you want to retry with elevated rights?",
-            L"CMR5 Patcher",
+            T(state->language, TextId::MsgNeedAdmin),
+            caption,
             MB_ICONQUESTION | MB_YESNO);
 
         if (answer != IDYES) {
@@ -670,32 +925,32 @@ void RunPatch(HWND hwnd, AppState* state) {
         DWORD launchError = ERROR_SUCCESS;
         if (LaunchElevatedPatchAndWait(hwnd, state->installPath, flags, &elevatedExitCode, &launchError)) {
             if (ImpliesUnlockAll(flags)) {
-                MessageBoxW(hwnd, L"Patch applied successfully (elevated).\nUnlock-all option applied (or implied by mini compatibility pattern).", L"CMR5 Patcher", MB_ICONINFORMATION | MB_OK);
+                MessageBoxW(hwnd, T(state->language, TextId::MsgPatchSuccessElevatedUnlock), caption, MB_ICONINFORMATION | MB_OK);
             } else {
-                MessageBoxW(hwnd, L"Patch applied successfully (elevated).", L"CMR5 Patcher", MB_ICONINFORMATION | MB_OK);
+                MessageBoxW(hwnd, T(state->language, TextId::MsgPatchSuccessElevated), caption, MB_ICONINFORMATION | MB_OK);
             }
             return;
         }
 
         if (launchError == ERROR_CANCELLED) {
-            MessageBoxW(hwnd, L"Elevation was cancelled.", L"CMR5 Patcher", MB_ICONWARNING | MB_OK);
+            MessageBoxW(hwnd, T(state->language, TextId::MsgElevationCancelled), caption, MB_ICONWARNING | MB_OK);
             return;
         }
 
         wchar_t errorText[256]{};
-        StringCchPrintfW(errorText, _countof(errorText), L"Elevated patch failed (code: %lu).", elevatedExitCode);
-        MessageBoxW(hwnd, errorText, L"CMR5 Patcher", MB_ICONERROR | MB_OK);
+        StringCchPrintfW(errorText, _countof(errorText), T(state->language, TextId::MsgElevatedFailedFmt), elevatedExitCode);
+        MessageBoxW(hwnd, errorText, caption, MB_ICONERROR | MB_OK);
         return;
     }
 
     if (status == PatchStatus::SizeTooSmall) {
-        MessageBoxW(hwnd, L"OPTIONS file is too small.", L"CMR5 Patcher", MB_ICONERROR | MB_OK);
+        MessageBoxW(hwnd, T(state->language, TextId::MsgOptionsTooSmall), caption, MB_ICONERROR | MB_OK);
         return;
     }
 
     wchar_t errorText[256]{};
-    StringCchPrintfW(errorText, _countof(errorText), L"Patch failed (Win32 error: %lu).", patchError);
-    MessageBoxW(hwnd, errorText, L"CMR5 Patcher", MB_ICONERROR | MB_OK);
+    StringCchPrintfW(errorText, _countof(errorText), T(state->language, TextId::MsgPatchFailedFmt), patchError);
+    MessageBoxW(hwnd, errorText, caption, MB_ICONERROR | MB_OK);
 }
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -708,13 +963,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(app));
             state = app;
 
-            HMENU appMenu = BuildAppMenu();
+            HMENU appMenu = BuildAppMenu(state);
             if (appMenu) {
                 SetMenu(hwnd, appMenu);
             }
 
-            CreateWindowExW(0, L"STATIC", L"Game path:", WS_VISIBLE | WS_CHILD,
-                            16, 16, 140, 20, hwnd, nullptr, nullptr, nullptr);
+            state->lblGamePath = CreateWindowExW(0, L"STATIC", T(state->language, TextId::LabelGamePath), WS_VISIBLE | WS_CHILD,
+                                                 16, 16, 200, 20, hwnd, nullptr, nullptr, nullptr);
 
             state->editPath = CreateWindowExW(
                 WS_EX_CLIENTEDGE,
@@ -726,34 +981,35 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 500,
                 24,
                 hwnd,
-                reinterpret_cast<HMENU>(kIdEditPath),
+                reinterpret_cast<HMENU>(static_cast<INT_PTR>(kIdEditPath)),
                 nullptr,
                 nullptr);
 
-            state->cbAll = CreateWindowExW(0, L"BUTTON", L"Unlock all cars and circuits",
+            state->cbAll = CreateWindowExW(0, L"BUTTON", T(state->language, TextId::CheckboxAll),
                                            WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX,
-                                           16, 80, 340, 24, hwnd, reinterpret_cast<HMENU>(kIdCheckboxAll), nullptr, nullptr);
+                                           16, 80, 460, 24, hwnd, reinterpret_cast<HMENU>(static_cast<INT_PTR>(kIdCheckboxAll)), nullptr, nullptr);
 
-            state->cbMirror = CreateWindowExW(0, L"BUTTON", L"Enable mirror mode",
+            state->cbMirror = CreateWindowExW(0, L"BUTTON", T(state->language, TextId::CheckboxMirror),
                                               WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX,
-                                              16, 108, 280, 24, hwnd, reinterpret_cast<HMENU>(kIdCheckboxMirror), nullptr, nullptr);
+                                              16, 108, 460, 24, hwnd, reinterpret_cast<HMENU>(static_cast<INT_PTR>(kIdCheckboxMirror)), nullptr, nullptr);
 
-            state->cbMini = CreateWindowExW(0, L"BUTTON", L"Enable mini cars",
+            state->cbMini = CreateWindowExW(0, L"BUTTON", T(state->language, TextId::CheckboxMini),
                                             WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX,
-                                            16, 136, 300, 24, hwnd, reinterpret_cast<HMENU>(kIdCheckboxMini), nullptr, nullptr);
+                                            16, 136, 460, 24, hwnd, reinterpret_cast<HMENU>(static_cast<INT_PTR>(kIdCheckboxMini)), nullptr, nullptr);
 
-            state->cbReset = CreateWindowExW(0, L"BUTTON", L"Reset to default",
+            state->cbReset = CreateWindowExW(0, L"BUTTON", T(state->language, TextId::CheckboxReset),
                                              WS_VISIBLE | WS_CHILD | BS_AUTOCHECKBOX,
-                                             16, 164, 220, 24, hwnd, reinterpret_cast<HMENU>(kIdCheckboxReset), nullptr, nullptr);
+                                             16, 164, 320, 24, hwnd, reinterpret_cast<HMENU>(static_cast<INT_PTR>(kIdCheckboxReset)), nullptr, nullptr);
 
-            CreateWindowExW(0, L"BUTTON", L"Apply patch",
-                            WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-                            16, 204, 170, 32, hwnd, reinterpret_cast<HMENU>(kIdButtonApply), nullptr, nullptr);
+            state->btnApply = CreateWindowExW(0, L"BUTTON", T(state->language, TextId::ButtonApply),
+                                              WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+                                              16, 204, 170, 32, hwnd, reinterpret_cast<HMENU>(static_cast<INT_PTR>(kIdButtonApply)), nullptr, nullptr);
 
-            CreateWindowExW(0, L"STATIC", L"Backup file: OPTIONS.bak",
-                            WS_VISIBLE | WS_CHILD,
-                            210, 212, 220, 20, hwnd, nullptr, nullptr, nullptr);
+            state->lblBackup = CreateWindowExW(0, L"STATIC", T(state->language, TextId::LabelBackup),
+                                               WS_VISIBLE | WS_CHILD,
+                                               210, 212, 320, 20, hwnd, nullptr, nullptr, nullptr);
 
+            ApplyLanguageToUI(hwnd, state);
             return 0;
         }
 
@@ -767,7 +1023,21 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             }
 
             if (controlId == kIdMenuAboutVersion) {
-                MessageBoxW(hwnd, L"By tlt\nversion 1.0.0\ntolotra.alwaysdata.net", L"Version", MB_ICONINFORMATION | MB_OK);
+                MessageBoxW(hwnd, T(state->language, TextId::MsgVersionBody), T(state->language, TextId::MsgVersionTitle), MB_ICONINFORMATION | MB_OK);
+                return 0;
+            }
+
+            if (controlId == kIdMenuLanguageEnglish || controlId == kIdMenuLanguageFrench || controlId == kIdMenuLanguageMalagasy) {
+                if (state) {
+                    if (controlId == kIdMenuLanguageFrench) {
+                        state->language = Language::French;
+                    } else if (controlId == kIdMenuLanguageMalagasy) {
+                        state->language = Language::Malagasy;
+                    } else {
+                        state->language = Language::English;
+                    }
+                    ApplyLanguageToUI(hwnd, state);
+                }
                 return 0;
             }
 
@@ -852,16 +1122,16 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow) {
     }
 
     AppState state{};
+    state.language = Language::English;
 
     if (ReadInstallPathFromRegistry(state.installPath, static_cast<DWORD>(_countof(state.installPath))) &&
         DirectoryExists(state.installPath)) {
         state.installDetected = true;
-        lstrcpynW(state.installPathDisplay, state.installPath, static_cast<int>(_countof(state.installPathDisplay)));
     } else {
         state.installDetected = false;
         state.installPath[0] = L'\0';
-        lstrcpynW(state.installPathDisplay, L"Game is not installed or not detected.", static_cast<int>(_countof(state.installPathDisplay)));
     }
+    RefreshInstallPathDisplay(&state);
 
     const wchar_t kClassName[] = L"CMR5PatcherWin32Class";
 
@@ -876,14 +1146,14 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow) {
     wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
 
     if (!RegisterClassExW(&wc)) {
-        MessageBoxW(nullptr, L"Cannot register window class.", L"CMR5 Patcher", MB_ICONERROR | MB_OK);
+        MessageBoxW(nullptr, L"Cannot register window class.", T(state.language, TextId::WindowTitle), MB_ICONERROR | MB_OK);
         return 1;
     }
 
     HWND hwnd = CreateWindowExW(
         0,
         kClassName,
-        L"CMR5 Patcher",
+        T(state.language, TextId::WindowTitle),
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
         CW_USEDEFAULT,
         CW_USEDEFAULT,
@@ -895,7 +1165,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow) {
         &state);
 
     if (!hwnd) {
-        MessageBoxW(nullptr, L"Cannot create main window.", L"CMR5 Patcher", MB_ICONERROR | MB_OK);
+        MessageBoxW(nullptr, L"Cannot create main window.", T(state.language, TextId::WindowTitle), MB_ICONERROR | MB_OK);
         return 1;
     }
 
@@ -910,3 +1180,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow) {
 
     return static_cast<int>(msg.wParam);
 }
+
+
+
+
