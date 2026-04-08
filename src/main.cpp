@@ -14,6 +14,7 @@ constexpr DWORD kExpectedOptionsSize = 931048;
 constexpr size_t kOffsetUnlockA = 0x0C;
 constexpr size_t kOffsetMirrorA = 0x0D;
 constexpr size_t kOffsetMiniA = 0x0E;
+constexpr size_t kOffsetUnlockBLegacy = 0x0F;
 constexpr size_t kOffsetUnlockB = 0x10;
 constexpr size_t kOffsetMirrorB = 0x11;
 constexpr size_t kOffsetMiniB = 0x12;
@@ -220,35 +221,45 @@ bool WriteFileBytes(const wchar_t* path, const BYTE* buffer, DWORD size, DWORD* 
 }
 
 void ApplyPatch(BYTE* data, DWORD flags) {
-    if ((flags & kPatchReset) != 0u) {
+    const bool preResetForModes = (flags & (kPatchMirror | kPatchMini)) != 0u;
+
+    if (preResetForModes || (flags & kPatchReset) != 0u) {
+        // Explicit default reset before applying mirror/mini (or reset-only).
         data[kOffsetUnlockA] = 0x00;
         data[kOffsetMirrorA] = 0x00;
         data[kOffsetMiniA] = 0x00;
+        data[kOffsetUnlockBLegacy] = 0x00;
         data[kOffsetUnlockB] = 0x00;
         data[kOffsetMirrorB] = 0x00;
         data[kOffsetMiniB] = 0x00;
+    }
+
+    if ((flags & kPatchReset) != 0u) {
         return;
     }
 
     if ((flags & kPatchAll) != 0u) {
-        // Community guides point to the two base cheat bytes at 0x0C and 0x10.
         data[kOffsetUnlockA] = 0xFF;
         data[kOffsetUnlockB] = 0xFF;
     }
 
     if ((flags & kPatchMirror) != 0u) {
-        // Mirror mode extends the same blocks to two bytes each.
-        data[kOffsetUnlockA] = 0xFF;
         data[kOffsetMirrorA] = 0xFF;
-        data[kOffsetUnlockB] = 0xFF;
         data[kOffsetMirrorB] = 0xFF;
     }
 
     if ((flags & kPatchMini) != 0u) {
-        // Mini cars extends the blocks to three bytes each.
+        // Mini compatibility mode:
+        // - First block:  FF 00 FF at 0x0C..0x0E
+        // - Second block: write both offset interpretations:
+        //   0x0F..0x11 and 0x10..0x12 => final 0x0F..0x12 = FF
         data[kOffsetUnlockA] = 0xFF;
-        data[kOffsetMirrorA] = 0xFF;
+        if ((flags & kPatchMirror) == 0u) {
+            data[kOffsetMirrorA] = 0x00;
+        }
         data[kOffsetMiniA] = 0xFF;
+
+        data[kOffsetUnlockBLegacy] = 0xFF;
         data[kOffsetUnlockB] = 0xFF;
         data[kOffsetMirrorB] = 0xFF;
         data[kOffsetMiniB] = 0xFF;
@@ -458,6 +469,10 @@ DWORD BuildPatchFlagsFromUI(const AppState* state) {
     return flags;
 }
 
+bool ImpliesUnlockAll(DWORD flags) {
+    return (flags & (kPatchAll | kPatchMini)) != 0u;
+}
+
 void RunPatch(HWND hwnd, AppState* state) {
     if (!state) {
         return;
@@ -502,7 +517,11 @@ void RunPatch(HWND hwnd, AppState* state) {
     }
 
     if (status == PatchStatus::Ok) {
-        MessageBoxW(hwnd, L"Patch applied successfully.", L"CMR5 Patcher", MB_ICONINFORMATION | MB_OK);
+        if (ImpliesUnlockAll(flags)) {
+            MessageBoxW(hwnd, L"Patch applied successfully.\nUnlock-all option applied (or implied by mini compatibility pattern).", L"CMR5 Patcher", MB_ICONINFORMATION | MB_OK);
+        } else {
+            MessageBoxW(hwnd, L"Patch applied successfully.", L"CMR5 Patcher", MB_ICONINFORMATION | MB_OK);
+        }
         return;
     }
 
@@ -529,7 +548,11 @@ void RunPatch(HWND hwnd, AppState* state) {
         DWORD elevatedExitCode = 1;
         DWORD launchError = ERROR_SUCCESS;
         if (LaunchElevatedPatchAndWait(hwnd, state->installPath, flags, &elevatedExitCode, &launchError)) {
-            MessageBoxW(hwnd, L"Patch applied successfully (elevated).", L"CMR5 Patcher", MB_ICONINFORMATION | MB_OK);
+            if (ImpliesUnlockAll(flags)) {
+                MessageBoxW(hwnd, L"Patch applied successfully (elevated).\nUnlock-all option applied (or implied by mini compatibility pattern).", L"CMR5 Patcher", MB_ICONINFORMATION | MB_OK);
+            } else {
+                MessageBoxW(hwnd, L"Patch applied successfully (elevated).", L"CMR5 Patcher", MB_ICONINFORMATION | MB_OK);
+            }
             return;
         }
 
