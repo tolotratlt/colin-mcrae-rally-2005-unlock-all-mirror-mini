@@ -887,8 +887,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow) {
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
         CW_USEDEFAULT,
         CW_USEDEFAULT,
-        550,
-        290,
+        620,
+        360,
         nullptr,
         nullptr,
         hInstance,
@@ -910,6 +910,3 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow) {
 
     return static_cast<int>(msg.wParam);
 }
-
-
-
