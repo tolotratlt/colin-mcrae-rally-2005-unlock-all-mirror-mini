@@ -1,43 +1,117 @@
 # CRM5 Patcher v1.0.0
 
-Petit utilitaire destiné à modifier certains paramètres du jeu **Colin McRae Rally 2005** afin d’activer des fonctionnalités cachées ou pratiques.
+## 🇬🇧 English
 
-## 📌 Fonctionnalités
+Small utility to patch **Colin McRae Rally 2005** and enable useful or hidden features.
+
+### 📌 Features
+
+- **Unlock all cars and circuits**  
+  Immediate access to all game content.
+
+- **Mirror mode**  
+  Reverse track layouts for a different driving experience.
+
+- **Mini cars mode**  
+  Turns vehicles into miniature versions for a fun effect.
+
+- **Reset to default**  
+  Restore original game parameters.
+
+### 🖥️ Interface
+
+- Game path selection
+- Checkboxes for each feature
+- Apply patch button
+- Automatic backup creation
+
+### 📦 Download
+
+Executables are available here:  
+https://github.com/tolotratlt/colin-mcrae-rally-2005-unlock-all-mirror-mini/releases/tag/v1.0.0
+
+### ⚙️ Installation
+
+No installation required.
+
+- Portable executable
+- Windows only
+- Available in **x86** and **x64**
+
+### ▶️ Usage
+
+1. Launch **CRM5 Patcher**
+2. Verify or set the game path  
+   Example: `D:\Games\Colin McRae Rally 2005`
+3. Select desired options
+4. Click **Apply patch**
+
+### 💾 Backup
+
+A backup file is automatically created before any modification:
+
+```
+OPTONS.bak
+```
+
+### 🔄 Restore
+
+To restore default settings:
+
+- Check **Reset to default**
+- Click **Apply patch**
+
+### ⚠️ Disclaimer
+
+- Use at your own risk
+- Always keep backups
+- Compatible only with **Colin McRae Rally 2005**
+
+### 📜 License
+
+This project is licensed under the **MIT License**.
+
+---
+
+## 🇫🇷 Français
+
+Petit utilitaire permettant de modifier **Colin McRae Rally 2005** afin d’activer certaines fonctionnalités utiles ou cachées.
+
+### 📌 Fonctionnalités
 
 - **Débloquer toutes les voitures et circuits**  
-  Accès immédiat à tout le contenu du jeu sans progression.
+  Accès immédiat à tout le contenu du jeu.
 
-- **Activer le mode miroir**  
-  Inverse les circuits pour une expérience de conduite différente.
+- **Mode miroir**  
+  Inverse les circuits pour une nouvelle expérience de conduite.
 
-- **Activer le mode mini voitures**  
-  Transforme les véhicules en versions miniatures pour un rendu fun.
+- **Mode mini voitures**  
+  Transforme les véhicules en versions miniatures.
 
-- **Réinitialiser les paramètres**  
-  Restaure les valeurs par défaut du jeu.
+- **Remise à défaut**  
+  Restaure les paramètres d’origine.
 
-## 🖥️ Interface
-
-L’application propose une interface simple :
+### 🖥️ Interface
 
 - Sélection du dossier du jeu
-- Cases à cocher pour chaque fonctionnalité
-- Bouton pour appliquer les modifications
-- Création automatique d’une sauvegarde
+- Cases à cocher
+- Bouton d’application du patch
+- Sauvegarde automatique
 
-## 📷 Aperçu
+### 📦 Téléchargement
 
-![CRM5 Patcher](screenshot.png)
+Les exécutables sont disponibles ici :  
+https://github.com/tolotratlt/colin-mcrae-rally-2005-unlock-all-mirror-mini/releases/tag/v1.0.0
 
-## ⚙️ Installation
+### ⚙️ Installation
 
 Aucune installation requise.
 
 - Exécutable portable
-- Compatible Windows uniquement
+- Windows uniquement
 - Versions disponibles : **x86** et **x64**
 
-## ▶️ Utilisation
+### ▶️ Utilisation
 
 1. Lancer **CRM5 Patcher**
 2. Vérifier ou renseigner le chemin du jeu  
@@ -45,38 +119,25 @@ Aucune installation requise.
 3. Cocher les options souhaitées
 4. Cliquer sur **Apply patch**
 
-## 💾 Sauvegarde
+### 💾 Sauvegarde
 
-Avant toute modification, le patcher crée automatiquement un fichier de sauvegarde :
+Un fichier de sauvegarde est automatiquement créé :
 
 ```
-OPTIONS.bak
+OPTONS.bak
 ```
 
-## 🔄 Restauration
-
-Pour revenir aux paramètres par défaut :
+### 🔄 Restauration
 
 - Cocher **Reset to default**
 - Cliquer sur **Apply patch**
 
-## ⚠️ Avertissement
+### ⚠️ Avertissement
 
-- Utiliser ce patch à vos risques
-- Toujours conserver une copie de vos fichiers de sauvegarde
+- Utilisation à vos risques
+- Conservez une sauvegarde
 - Compatible uniquement avec **Colin McRae Rally 2005**
 
-## 📜 Licence
+### 📜 Licence
 
-Ce projet est sous licence **MIT**.
-
-Vous êtes libre de :
-- Utiliser
-- Modifier
-- Distribuer
-
-Sous réserve d’inclure la licence originale.
-
-## 📦 Version
-
-**v1.0.0**
+Projet sous licence **MIT**.
